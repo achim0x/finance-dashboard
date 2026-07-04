@@ -1,0 +1,37 @@
+# CI: tests on every push/MR; central staging deploy per the house pattern
+# (adjust TOOL_NAME/SCRIPT_REPO_URL when a staging runner exists).
+image: python:3.12
+
+variables:
+  TOOL_NAME: "FinanceDashboard"
+  STAGING_BRANCH: "staging"
+  SCRIPT_REPO_URL: "https://<gitlab-host>/<gruppe>/webtools_common.git"
+  SCRIPT_REPO_REF: "develop"
+  SCRIPT_REL_PATH: "deploy/setup_tool.ps1"
+
+stages:
+  - test
+  - deploy
+
+test:
+  stage: test
+  script:
+    - pip install -r requirements.txt -r requirements-dev.txt
+    - pytest
+  artifacts:
+    when: always
+    paths:
+      - reports/requirements-matrix.md
+    expire_in: 4 weeks
+
+deploy_staging:
+  stage: deploy
+  script:
+    - git clone --depth 1 --branch "$env:SCRIPT_REPO_REF" "$env:SCRIPT_REPO_URL" external_scripts
+    - powershell -ExecutionPolicy Bypass -File "$env:CI_PROJECT_DIR\external_scripts\$env:SCRIPT_REL_PATH" -Tool $env:TOOL_NAME -Branch $env:STAGING_BRANCH
+    - echo "Deployment auf Staging abgeschlossen!"
+  when: manual
+  tags:
+    - staging-server
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $STAGING_BRANCH'
