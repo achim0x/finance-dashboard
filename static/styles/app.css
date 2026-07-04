@@ -1,0 +1,136 @@
+/* Finance Dashboard — base styles. Vanilla CSS, no framework. */
+:root {
+  --primaer: #134074;
+  --primaer-hell: #8da9c4;
+  --hintergrund: #f5f7fa;
+  --flaeche: #ffffff;
+  --text: #1c2430;
+  --rand: #d5dce5;
+  --positiv: #1e7d32;
+  --negativ: #b3261e;
+  --warnung: #9a6700;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: var(--hintergrund);
+  color: var(--text);
+  font-size: 15px;
+}
+
+/* Header / navigation */
+.kopf { background: var(--primaer); color: #fff; }
+.kopf-zeile {
+  display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;
+  max-width: 1400px; margin: 0 auto; padding: 0.6rem 1rem;
+}
+.marke { color: #fff; font-weight: 700; font-size: 1.1rem; text-decoration: none; }
+.hauptnav { display: flex; gap: 1rem; flex-wrap: wrap; }
+.hauptnav a { color: #dbe4ee; text-decoration: none; padding: 0.2rem 0; }
+.hauptnav a:hover { color: #fff; }
+.badge {
+  background: var(--warnung); color: #fff; border-radius: 999px;
+  font-size: 0.7rem; padding: 0 0.4rem; margin-left: 0.2rem;
+}
+.depot-wechsel { margin-left: auto; }
+.depot-wechsel select { padding: 0.3rem; border-radius: 4px; border: none; }
+
+/* Layout */
+.inhalt { max-width: 1400px; margin: 1rem auto; padding: 0 1rem 3rem; }
+.seitenkopf {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 1rem; flex-wrap: wrap; margin-bottom: 0.8rem;
+}
+.seitenkopf > div { display: flex; gap: 0.4rem; flex-wrap: wrap; align-items: center; }
+h1 { font-size: 1.4rem; margin: 0.5rem 0; }
+h2 { font-size: 1.1rem; }
+
+/* Flash messages */
+.meldungen { margin-bottom: 1rem; }
+.meldung { padding: 0.6rem 1rem; border-radius: 6px; margin-bottom: 0.4rem; }
+.meldung.success { background: #e2f3e5; color: var(--positiv); }
+.meldung.error { background: #fbe4e2; color: var(--negativ); }
+.hinweis { color: #5b6675; }
+.hinweis.klein, small { font-size: 0.8rem; }
+
+/* Buttons */
+.knopf {
+  display: inline-block; background: var(--primaer); color: #fff; border: none;
+  padding: 0.45rem 0.9rem; border-radius: 6px; cursor: pointer;
+  text-decoration: none; font-size: 0.9rem;
+}
+.knopf:hover { filter: brightness(1.1); }
+.knopf.sekundaer { background: #e4e9f0; color: var(--text); }
+.knopf.gefahr { background: var(--negativ); }
+.knopf.klein { padding: 0.25rem 0.6rem; font-size: 0.8rem; }
+form.inline { display: inline; }
+
+/* Tables */
+.tabelle {
+  width: 100%; border-collapse: collapse; background: var(--flaeche);
+  border: 1px solid var(--rand); border-radius: 8px; overflow: hidden;
+}
+.tabelle th, .tabelle td { padding: 0.45rem 0.6rem; border-bottom: 1px solid var(--rand); text-align: left; }
+.tabelle thead th { background: #eef2f7; font-weight: 600; font-size: 0.82rem; }
+.tabelle .zahl { text-align: right; font-variant-numeric: tabular-nums; }
+.tabelle tfoot .summe td { font-weight: 700; background: #eef2f7; }
+.tabelle .aktionen { text-align: right; white-space: nowrap; }
+.untertabelle { width: 100%; border-collapse: collapse; background: #f6f9fc; }
+.untertabelle th, .untertabelle td { padding: 0.3rem 0.6rem; border-bottom: 1px solid var(--rand); }
+tr.tranchen > td { padding: 0; }
+
+.positiv { color: var(--positiv); }
+.negativ { color: var(--negativ); }
+.neutral { color: inherit; }
+.warnung { color: var(--warnung); font-size: 0.78rem; }
+.ok { color: var(--positiv); }
+
+/* KPI tiles */
+.kacheln { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 0.6rem; margin: 0.8rem 0; }
+.kachel {
+  background: var(--flaeche); border: 1px solid var(--rand); border-radius: 8px;
+  padding: 0.6rem 0.8rem; display: flex; flex-direction: column; gap: 0.2rem;
+}
+.kachel span { font-size: 0.78rem; color: #5b6675; }
+.kachel strong { font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+.kachel.detail { display: none; }
+.kacheln.details-offen .kachel.detail { display: flex; }
+
+/* Chart */
+.chartbereich { background: var(--flaeche); border: 1px solid var(--rand); border-radius: 8px; padding: 1rem; margin-top: 1rem; }
+.chart-steuerung { display: flex; gap: 0.4rem; align-items: center; flex-wrap: wrap; }
+.minichart canvas { display: block; }
+
+/* Forms */
+.formular { max-width: 480px; display: flex; flex-direction: column; gap: 0.7rem; background: var(--flaeche); border: 1px solid var(--rand); border-radius: 8px; padding: 1rem; }
+.inline-formular { display: flex; gap: 0.6rem; align-items: flex-end; flex-wrap: wrap; max-width: none; }
+.feld { display: flex; flex-direction: column; gap: 0.2rem; }
+.feld span { font-size: 0.82rem; color: #444f5d; }
+.feld input, .feld select, .feld textarea {
+  padding: 0.4rem 0.5rem; border: 1px solid var(--rand); border-radius: 6px; font: inherit;
+}
+.feld.kontrollkaestchen { flex-direction: row; align-items: center; gap: 0.4rem; }
+.formular .aktionen { display: flex; gap: 0.5rem; }
+.filterleiste { display: flex; gap: 0.4rem; margin-bottom: 0.6rem; }
+
+/* Setup */
+.setup-spalten { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1rem; }
+.setup-block { background: var(--flaeche); border: 1px solid var(--rand); border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+.spaltenwahl { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.3rem; }
+
+/* Expandable rows / context menu */
+.aufklappen { background: none; border: none; cursor: pointer; font-size: 0.9rem; }
+.kontextmenue { position: relative; display: inline-block; }
+.kontextmenue summary { cursor: pointer; list-style: none; padding: 0 0.4rem; }
+.kontextmenue div {
+  position: absolute; right: 0; background: var(--flaeche); border: 1px solid var(--rand);
+  border-radius: 6px; display: flex; flex-direction: column; min-width: 160px; z-index: 10;
+}
+.kontextmenue div a { padding: 0.4rem 0.7rem; text-decoration: none; color: var(--text); }
+.kontextmenue div a:hover { background: var(--hintergrund); }
+
+@media (max-width: 800px) {
+  .tabelle { display: block; overflow-x: auto; }
+}

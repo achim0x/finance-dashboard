@@ -1,0 +1,12 @@
+[tool.pytest.ini_options]
+minversion = "7.4"
+testpaths = ["tests"]
+markers = [
+  "requirement(id): links a test to a requirement ID (e.g. REQ-CALC-FIFO, see spec §10)",
+]
+addopts = "-ra"
+filterwarnings = [
+  # SQLite has no native DECIMAL type; we accept the float round-trip for
+  # dev/tests (MariaDB stores real DECIMALs in production).
+  "ignore:.*support Decimal objects natively.*:sqlalchemy.exc.SAWarning",
+]

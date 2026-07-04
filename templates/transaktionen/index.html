@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import geldzelle %}
+{% block titel %}{{ depot.name }} — {{ _("transaktionen.titel") }}{% endblock %}
+{% block inhalt %}
+<div class="seitenkopf">
+  <h1>{{ _("transaktionen.titel") }} — {{ depot.name }}</h1>
+  <div>
+    <a class="knopf" href="{{ url_for('zahlungen.neu', depot_id=depot.id) }}">{{ _("zahlung.titel_neu") }}</a>
+    <a class="knopf" href="{{ url_for('dividenden.neu', depot_id=depot.id) }}">{{ _("dividende.titel_neu") }}</a>
+    <a class="knopf" href="{{ url_for('steuern.neu', depot_id=depot.id) }}">{{ _("steuer.titel_neu") }}</a>
+    <a class="knopf sekundaer" href="{{ url_for('export.depot_export', depot_id=depot.id, bereich='transaktionen', fmt='xlsx') }}">xlsx</a>
+    <a class="knopf sekundaer" href="{{ url_for('export.depot_export', depot_id=depot.id, bereich='transaktionen', fmt='csv') }}">CSV</a>
+    <a class="knopf sekundaer" target="_blank" href="{{ url_for('export.depot_export', depot_id=depot.id, bereich='transaktionen', fmt='pdf') }}">{{ _("aktion.drucken") }}</a>
+  </div>
+</div>
+
+<form method="get" class="filterleiste">
+  <select name="typ" onchange="this.form.submit()">
+    <option value="">{{ _("transaktionen.spalte.typ") }} –</option>
+    {% for t in ["kauf", "verkauf", "einzahlung", "auszahlung", "dividende", "steuerverrechnung"] %}
+      <option value="{{ t }}" {% if typ_filter == t %}selected{% endif %}>{{ _("transaktionen.typ." + t) }}</option>
+    {% endfor %}
+  </select>
+  <select name="sortierung" onchange="this.form.submit()">
+    <option value="absteigend" {% if sortierung == "absteigend" %}selected{% endif %}>▼</option>
+    <option value="aufsteigend" {% if sortierung == "aufsteigend" %}selected{% endif %}>▲</option>
+  </select>
+</form>
+
+{% if not zeilen %}
+  <p class="hinweis">{{ _("transaktionen.keine") }}</p>
+{% else %}
+<table class="tabelle">
+  <thead>
+    <tr>
+      <th>{{ _("transaktionen.spalte.zeitpunkt") }}</th>
+      <th>{{ _("transaktionen.spalte.typ") }}</th>
+      <th>{{ _("transaktionen.spalte.instrument") }}</th>
+      <th class="zahl">{{ _("transaktionen.spalte.betrag") }}</th>
+      <th>{{ _("transaktionen.spalte.details") }}</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for z in zeilen %}
+    <tr>
+      <td>{{ z.zeitpunkt|zeitpunkt }}</td>
+      <td>{{ _("transaktionen.typ." + z.typ) }}</td>
+      <td>{{ z.instrument_name or "–" }}</td>
+      {{ geldzelle(z.betrag) }}
+      <td>{{ z.details or "" }}</td>
+      <td class="aktionen">
+        {% set endpoint = edit_endpoints[z.typ] %}
+        <a class="knopf klein sekundaer"
+           href="{{ url_for(endpoint[0], depot_id=depot.id, **{endpoint[1]: z.id}) }}">{{ _("aktion.bearbeiten") }}</a>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}

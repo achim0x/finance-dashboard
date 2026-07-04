@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf, feld %}
+{% block titel %}{{ _("instrument.titel_neu") }}{% endblock %}
+{% block inhalt %}
+<h1>{{ _("instrument.titel_neu") }}</h1>
+<form method="post" class="formular">
+  {{ csrf() }}
+  {{ feld("isin", "instrument.isin", form.get("isin", ""), pflicht=true) }}
+  {{ feld("wkn", "instrument.wkn", form.get("wkn", "")) }}
+  {{ feld("name", "instrument.name", form.get("name", ""), pflicht=true) }}
+  <label class="feld">
+    <span>{{ _("instrument.kategorie") }} *</span>
+    <select name="kategorie" required>
+      {% for k in kategorien %}
+        <option value="{{ k }}" {% if form.get("kategorie") == k %}selected{% endif %}>
+          {{ _("instrument.kategorie_werte." + k) }}
+        </option>
+      {% endfor %}
+    </select>
+  </label>
+  {{ feld("waehrung", "instrument.waehrung", form.get("waehrung", "EUR"), pflicht=true) }}
+  {{ feld("referenzboerse", "instrument.referenzboerse", form.get("referenzboerse", "")) }}
+  {{ feld("symbol", "instrument.symbol", form.get("symbol", "")) }}
+  {{ feld("basiswert", "instrument.basiswert", form.get("basiswert", "")) }}
+  <div class="aktionen">
+    <button type="submit" class="knopf">{{ _("aktion.anlegen") }}</button>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf, feld, textfeld, instrument_auswahl %}
+{% block titel %}{{ _("dividende.titel_bearbeiten") if dividende else _("dividende.titel_neu") }}{% endblock %}
+{% block inhalt %}
+<h1>{{ _("dividende.titel_bearbeiten") if dividende else _("dividende.titel_neu") }} — {{ depot.name }}</h1>
+<form method="post" class="formular">
+  {{ csrf() }}
+  {{ instrument_auswahl(instrumente, gewaehlt=(form.get("instrument_id")|int(0) or (dividende.instrument_id if dividende else vorauswahl)), label_key="dividende.instrument") }}
+  {{ feld("betrag", "dividende.betrag", form.get("betrag", dividende.betrag if dividende else ""), pflicht=true) }}
+  {{ feld("zeitpunkt", "dividende.zeitpunkt",
+          form.get("zeitpunkt", dividende.zeitpunkt.strftime("%Y-%m-%dT%H:%M") if dividende else ""),
+          typ="datetime-local", pflicht=true) }}
+  {{ feld("betrag_je_anteil", "dividende.betrag_je_anteil", form.get("betrag_je_anteil", dividende.betrag_je_anteil if dividende else "")) }}
+  {{ feld("stueck_zum_zeitpunkt", "dividende.stueck_zum_zeitpunkt", form.get("stueck_zum_zeitpunkt", dividende.stueck_zum_zeitpunkt if dividende else "")) }}
+  {{ textfeld("notiz", "dividende.notiz", form.get("notiz", dividende.notiz if dividende else "")) }}
+  <div class="aktionen">
+    <button type="submit" class="knopf">{{ _("aktion.speichern") }}</button>
+    <a class="knopf sekundaer" href="{{ url_for('transaktionen.index', depot_id=depot.id) }}">{{ _("aktion.abbrechen") }}</a>
+  </div>
+</form>
+{% endblock %}

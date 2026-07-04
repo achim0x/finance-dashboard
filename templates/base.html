@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="{{ aktuelle_sprache }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block titel %}{{ _("app.titel") }}{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles/app.css') }}">
+  <link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
+  <meta name="theme-color" content="#134074">
+  <link rel="icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+</head>
+<body>
+<header class="kopf">
+  <div class="kopf-zeile">
+    <a class="marke" href="{{ url_for('uebersicht.index') }}">{{ _("app.titel") }}</a>
+    <nav class="hauptnav">
+      <a href="{{ url_for('uebersicht.index') }}">{{ _("nav.uebersicht") }}</a>
+      {% if aktuelles_depot %}
+        <a href="{{ url_for('depots.dashboard', depot_id=aktuelles_depot.id) }}">{{ _("nav.dashboard") }}</a>
+        <a href="{{ url_for('bestand.index', depot_id=aktuelles_depot.id) }}">{{ _("nav.bestand") }}
+          {% if veraltete_kurse_badge %}<span class="badge">{{ veraltete_kurse_badge }}</span>{% endif %}</a>
+        <a href="{{ url_for('verkaeufe.index', depot_id=aktuelles_depot.id) }}">{{ _("nav.verkaeufe") }}</a>
+        <a href="{{ url_for('transaktionen.index', depot_id=aktuelles_depot.id) }}">{{ _("nav.transaktionen") }}</a>
+        <a href="{{ url_for('snapshots.index', depot_id=aktuelles_depot.id) }}">{{ _("nav.snapshots") }}</a>
+      {% endif %}
+      <a href="{{ url_for('kurs_setup.index') }}">{{ _("nav.setup") }}</a>
+      <a href="{{ url_for('einstellungen.index') }}">{{ _("nav.einstellungen") }}</a>
+    </nav>
+    {% if alle_depots_nav %}
+    <form class="depot-wechsel" method="get" action="">
+      <select onchange="if(this.value)window.location=this.value">
+        <option value="">{{ _("nav.depot_waehlen") }}</option>
+        {% for d in alle_depots_nav %}
+          <option value="{{ url_for('uebersicht.aktivieren', depot_id=d.id) }}"
+                  {% if aktuelles_depot and aktuelles_depot.id == d.id %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </form>
+    {% endif %}
+  </div>
+</header>
+
+<main class="inhalt">
+  {% with meldungen = get_flashed_messages(with_categories=true) %}
+    {% if meldungen %}
+      <div class="meldungen">
+        {% for kategorie, text in meldungen %}
+          <div class="meldung {{ kategorie }}">{{ text }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block inhalt %}{% endblock %}
+</main>
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block skripte %}{% endblock %}
+<script>
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function () {
+      navigator.serviceWorker.register(
+        "{{ url_for('pwa.service_worker') }}",
+        { scope: "{{ request.script_root }}/" }
+      );
+    });
+  }
+</script>
+</body>
+</html>

@@ -21,6 +21,7 @@ htmlcov/
 reports/
 dist/
 build/
+_mig_test.sqlite
 
 # Editor / OS
 .idea/

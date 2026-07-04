@@ -1,0 +1,51 @@
+{# Shared form/display macros. All labels are i18n keys (REQ-I18N). #}
+
+{% macro csrf() -%}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{%- endmacro %}
+
+{% macro feld(name, label_key, wert="", typ="text", pflicht=false, schritt=none, hinweis_key=none) -%}
+  <label class="feld">
+    <span>{{ _(label_key) }}{% if pflicht %} *{% endif %}</span>
+    <input type="{{ typ }}" name="{{ name }}" value="{{ wert if wert is not none else '' }}"
+           {% if pflicht %}required{% endif %} {% if schritt %}step="{{ schritt }}"{% endif %}>
+    {% if hinweis_key %}<small>{{ _(hinweis_key) }}</small>{% endif %}
+  </label>
+{%- endmacro %}
+
+{% macro textfeld(name, label_key, wert="") -%}
+  <label class="feld">
+    <span>{{ _(label_key) }}</span>
+    <textarea name="{{ name }}" rows="2">{{ wert if wert is not none else '' }}</textarea>
+  </label>
+{%- endmacro %}
+
+{% macro instrument_auswahl(instrumente, gewaehlt=none, label_key="kauf.instrument") -%}
+  <label class="feld">
+    <span>{{ _(label_key) }} *</span>
+    <select name="instrument_id" required>
+      <option value=""></option>
+      {% for i in instrumente %}
+        <option value="{{ i.id }}" {% if gewaehlt == i.id %}selected{% endif %}>
+          {{ i.name }} ({{ i.isin }})
+        </option>
+      {% endfor %}
+    </select>
+  </label>
+{%- endmacro %}
+
+{% macro loeschen_knopf(url, bestaetigung_key) -%}
+  <form method="post" action="{{ url }}" class="inline"
+        onsubmit="return confirm('{{ _(bestaetigung_key) }}');">
+    {{ csrf() }}
+    <button type="submit" class="knopf gefahr klein">{{ _("aktion.loeschen") }}</button>
+  </form>
+{%- endmacro %}
+
+{% macro geldzelle(wert, faerben=true) -%}
+  <td class="zahl {% if faerben %}{{ vorzeichen_klasse(wert) }}{% endif %}">{{ wert|betrag }}</td>
+{%- endmacro %}
+
+{% macro prozentzelle(wert, faerben=true) -%}
+  <td class="zahl {% if faerben %}{{ vorzeichen_klasse(wert) }}{% endif %}">{{ wert|prozent }}</td>
+{%- endmacro %}

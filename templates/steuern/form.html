@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf, feld, textfeld %}
+{% block titel %}{{ _("steuer.titel_bearbeiten") if steuerverrechnung else _("steuer.titel_neu") }}{% endblock %}
+{% block inhalt %}
+<h1>{{ _("steuer.titel_bearbeiten") if steuerverrechnung else _("steuer.titel_neu") }} — {{ depot.name }}</h1>
+<form method="post" class="formular">
+  {{ csrf() }}
+  {{ feld("betrag", "steuer.betrag", form.get("betrag", steuerverrechnung.betrag if steuerverrechnung else ""), pflicht=true) }}
+  {{ feld("zeitpunkt", "steuer.zeitpunkt",
+          form.get("zeitpunkt", steuerverrechnung.zeitpunkt.strftime("%Y-%m-%dT%H:%M") if steuerverrechnung else ""),
+          typ="datetime-local", pflicht=true) }}
+  {{ textfeld("notiz", "steuer.notiz", form.get("notiz", steuerverrechnung.notiz if steuerverrechnung else "")) }}
+  <div class="aktionen">
+    <button type="submit" class="knopf">{{ _("aktion.speichern") }}</button>
+    <a class="knopf sekundaer" href="{{ url_for('transaktionen.index', depot_id=depot.id) }}">{{ _("aktion.abbrechen") }}</a>
+  </div>
+</form>
+{% endblock %}

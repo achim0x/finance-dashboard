@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf %}
+{% block titel %}{{ _("kauf.titel_neu") }}{% endblock %}
+{% block inhalt %}
+<h1>{{ instrument.name }}</h1>
+<p>{{ _("kauf.backfill_frage") }}</p>
+<form method="post" class="formular">
+  {{ csrf() }}
+  <div class="aktionen">
+    <button type="submit" name="antwort" value="ja" class="knopf">{{ _("aktion.ja") }}</button>
+    <button type="submit" name="antwort" value="nein" class="knopf sekundaer">{{ _("aktion.nein") }}</button>
+  </div>
+</form>
+{% endblock %}

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf %}
+{% block titel %}{{ _("einstellungen.titel") }}{% endblock %}
+{% block inhalt %}
+<h1>{{ _("einstellungen.titel") }}</h1>
+
+<section class="setup-block">
+  <h2>{{ _("einstellungen.sprache") }}</h2>
+  <form method="post" action="{{ url_for('einstellungen.sprache') }}" class="inline-formular">
+    {{ csrf() }}
+    <select name="sprache">
+      {% for s in verfuegbare_sprachen %}
+        <option value="{{ s }}" {% if aktuelle_sprache == s %}selected{% endif %}>
+          {{ _("einstellungen.sprachen." + s) }}
+        </option>
+      {% endfor %}
+    </select>
+    <button type="submit" class="knopf">{{ _("aktion.speichern") }}</button>
+  </form>
+</section>
+
+<section class="setup-block">
+  <h2>{{ _("einstellungen.spalten") }}</h2>
+  <form method="post" action="{{ url_for('einstellungen.spalten') }}" class="formular">
+    {{ csrf() }}
+    <div class="spaltenwahl">
+      {% for s in alle_spalten %}
+        <label class="feld kontrollkaestchen">
+          <input type="checkbox" name="spalte_{{ s }}" {% if s in gewaehlte_spalten %}checked{% endif %}>
+          <span>{{ _("bestand.spalte." + s) }}</span>
+        </label>
+      {% endfor %}
+    </div>
+    <button type="submit" class="knopf">{{ _("aktion.speichern") }}</button>
+  </form>
+</section>
+
+<section class="setup-block">
+  <h2>{{ _("einstellungen.verrechnungsmethode") }}</h2>
+  <p>{{ settings.verrechnungsmethode }} — <span class="hinweis">{{ _("einstellungen.hinweis_env") }}</span></p>
+</section>
+{% endblock %}

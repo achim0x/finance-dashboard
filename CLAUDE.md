@@ -2,113 +2,92 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Current state
+## Sources of truth
 
-This repo is **greenfield and spec-driven**: no application code and no commits exist yet.
-Everything to build is described in two places, which are the sources of truth — read
-both before writing code:
+1. **`Musterdepot-SPEC.md`** — the domain spec (German): data model, binding
+   calculation logic (§5), provider architecture (§6), requirement IDs (§10).
+2. **`.claude/skills/web-app/`** — the house tech stack and conventions.
+   The Skill defines *how*; the Spec defines *what*.
 
-1. **`Musterdepot-SPEC.md`** — the domain: what the app is, its data model, and (most
-   importantly) the **binding calculation logic**. All prose, domain terms, and DB
-   columns are **German**.
-2. **`.claude/skills/web-app/`** — the house tech stack, directory layout, layering, and
-   conventions. Start at `SKILL.md`, then read the relevant `references/*.md` for the
-   part you're implementing. **The Skill defines *how*; the Spec defines *what*.** The
-   Spec deliberately does not repeat the Skill — it references it.
+Binding decisions (do not re-litigate): no auth (single user), PWA yes,
+`pydantic-settings`, SQLAlchemy 2.0 + Repository + Alembic (SQLite dev /
+MariaDB prod), money/prices always `Decimal` (round only at display),
+providers fully abstracted behind registries, credentials encrypted at rest
+(`CREDENTIALS_ENC_KEY` from env), **code comments/docs in English**, UI
+multilingual via i18n with German first (REQ-I18N).
 
-The `web-app` Skill auto-activates for this kind of work. Use it; don't reinvent the
-structure.
-
-## What is being built
-
-**Finance Dashboard** — a single-user web tool to manage multiple paper stock portfolios
-(hypothetical buys/sells, valued against live market prices). It executes **no real
-orders**, gives no advice, and is not tax software.
-
-## Binding project decisions (Spec §2)
-
-These are already decided — do not re-litigate them:
-
-- **No auth / no login** — single user. (Skill supports adding LDAP later; not now.)
-- **PWA = yes** — installable, offline app shell (`references/pwa.md`).
-- **Config** = `pydantic-settings` (`settings.py`, not `config.py`).
-- **Persistence** = SQLAlchemy 2.0 + Repository + Alembic; SQLite (dev) / MariaDB (prod).
-- **Money & prices are always `Decimal`, never `float`.** Round (commercial, 2 dp) only at
-  display time.
-- **Prices are fully abstracted** behind a `PriceProvider` protocol, routed by instrument
-  category (`AKTIEN_ETF` → FMP, `HEBELPRODUKT` → pytr/Trade Republic). FX is abstracted
-  behind `ExchangeRateProvider` (initial: FMP). New providers = new impl + registry entry,
-  with **no changes to the service or UI layer** — this extensibility is a tested requirement.
-- Provider credentials are **encrypted at rest** (key `CREDENTIALS_ENC_KEY` from env, never
-  the DB), never logged, never returned in cleartext to the UI.
-
-## Architecture (from the Skill)
-
-3-layer, thin routes, deutsch user-facing text:
-
-```
-blueprints/ (routes, thin)  →  services/<feature>/ (business logic)  →  domain/ + infrastructure/ (repositories, providers)
-                                        │
-                                     utils/ (cross-cutting)
-```
-
-- **Routes are thin:** parse form → call service → format → render. No SQL or business
-  logic in a blueprint.
-- **Each service is a package**: `service.py` (DB via repositories) + `helpers.py`
-  (pure `parse_*`/`validate_*`/`format_*`) + `__init__.py` (re-exports the public API).
-  Import from the package (`from services.kaeufe import ...`), never from `service.py`.
-- **No raw SQL in the request path** — all DB access via parametrized repositories.
-- Feature blueprints are **depot-scoped** (`/depots/<int:depot_id>/…`) via a
-  `get_depot_or_404` helper (analogous to the Skill's `get_project_or_404`).
-- **The MCP server imports the service layer directly** (never HTTP to the web app), so it
-  reuses the exact same validation and calculation as the UI. `helpers.py` parse/validate
-  functions are shared between web forms and MCP write tools.
-
-## The calculation logic is the heart (Spec §5)
-
-Get these right and test them exhaustively — they carry the requirement IDs in Spec §10:
-
-- **FIFO realized gain** on sells (`REQ-CALC-FIFO`), incl. partial sells and fees.
-- **Cash ledger** derives the balance (`barbestand`) — it is **never stored**, always
-  recomputed from buys/sells/payments/dividends/taxes (`REQ-CASH-LEDGER`).
-- **All bookings are editable/deletable** (incl. their timestamp). Any edit triggers a
-  **recomputation** of all derived state (balance, FIFO, realized gains, KPI/valuation
-  series) — `REQ-EDIT-RECALC`.
-- Key KPI identities to enforce as tests:
-  `Gesamtgewinn = Realisierter + Unrealisierter Gewinn` and
-  `Gesamtergebnis = Gesamtgewinn + Dividenden − Steuern`.
-- Historical revaluation uses **only daily closing prices** (`Schlusskurs`), never intraday.
-
-Derived state (balance, open positions, position KPIs, depot KPIs) is computed on the fly;
-only `Verkauf.realisierter_gewinn`, the `DepotBewertung` time series, and (frozen)
-`DepotSnapshot` are persisted.
-
-## Commands (conventions to follow once code exists)
-
-Per the Skill's `references/testing.md` and `assets/`. No `requirements.txt`/tests exist
-yet — create them from the Skill's `assets/` and reference files when scaffolding.
+## Commands
 
 ```bash
+. .venv/bin/activate                        # project venv (Python 3.12)
 pip install -r requirements.txt -r requirements-dev.txt
-python run.py                 # local dev server (create_app() factory)
-python run_mcp.py             # MCP server launcher
+alembic upgrade head                        # create/upgrade schema
+python run.py                               # dev server on :5000
+python run_mcp.py                           # MCP server (needs MUSTERDEPOT_MCP_KEY)
 
-pytest                        # full suite
-pytest tests/unit             # fast unit tests (formulas/helpers, no DB)
-pytest -m requirement         # requirements-traceability tests (REQ-* markers)
-pytest tests/requirements/test_req_calc_fifo.py   # a single requirement test
+pytest                                      # full suite (~65 tests, <5s)
+pytest tests/unit                           # calc engine + helpers, no DB
+pytest tests/requirements                   # one test per REQ-* (writes reports/requirements-matrix.md)
+pytest tests/requirements/test_req_calc.py::test_realisierter_gewinn_fifo_mit_teilverkauf_und_spesen
+TEST_MARIADB_URL=mariadb+mariadbconnector://app:app@localhost:3306/app_dev pytest  # dual backend
 
-# Integration tests are dual-backend; MariaDB variant is skipped unless reachable:
-TEST_MARIADB_URL=mariadb+mariadbconnector://app:app@localhost:3306/app_dev pytest
-
-alembic upgrade head          # apply migrations (revision 0001_initial first)
+python scripts/kurse_aktualisieren.py       # batch: quotes + daily closes + valuations
+python scripts/bewertungen_neu_aufbauen.py <depot_id> [--ab YYYY-MM-DD]
+python scripts/icons_generieren.py          # regenerate PWA icons
 ```
 
-Providers are tested against **fakes** — never hit real FMP/Trade Republic in CI.
+## Architecture
 
-## Build order
+```
+blueprints/ (thin, depot-scoped via get_depot_or_404)
+   → services/<feature>/ (package: service.py + helpers.py + __init__.py re-export)
+      → domain/          (entities, enums, berechnung/ = pure calc core, provider protocols)
+      → infrastructure/  (DB provider, sqlalchemy_repos, kurse/ + waehrung/ provider impls + registries, crypto)
+utils/ (db session access, i18n, formatters, parsing, flash, context processor)
+mcp_server/ (imports services directly — never HTTP; static bearer key)
+```
 
-Spec §14 maps the implementation sequence onto the Skill workflow. Follow it:
-scaffold → persistence → config → "Kauf → Bestand" vertical slice → price/FX providers +
-setup page → sells/payments/dividends/taxes → edit + recompute → chart range/basis →
-overview + snapshots → export → PWA → MCP server → tests → deployment.
+Key invariants:
+
+- **Import services from the package** (`from services.kaeufe import ...`),
+  never from `service.py`. No SQL outside `infrastructure/persistence/`.
+- **Derived state is never stored**: cash balance, positions and KPIs are
+  recomputed from bookings. Persisted derivations: `Verkauf.realisierter_gewinn`,
+  the `DepotBewertung` daily series, frozen `DepotSnapshot`.
+- **Every booking mutation** calls `services.neuberechnung.nach_buchungsaenderung`
+  (recompute realized gains of the instrument + rebuild the valuation series
+  from the earliest affected day). Rebuilds use **daily closes only**
+  (`Schlusskurs`), never intraday quotes (REQ-REVAL-CLOSE).
+- The coverage check (`services.zahlungen.deckung_pruefen`) runs after flush
+  and uses the **minimum running balance**, so back-dated bookings can't
+  overdraw the account; callers roll back on `ValidierungsFehler`.
+- **New price/FX provider** = implementation in `infrastructure/kurse|waehrung/`
+  + one `register(...)` call in the matching `registry.py`. Nothing else
+  changes (REQ-PRICE-EXT / REQ-FX-PROVIDER are tests).
+- **i18n**: no hardcoded UI strings — Jinja uses `_("key")`, Python uses
+  `utils.i18n.uebersetze`/flash helpers; keys live in `translations/de.json`.
+  Validation errors are i18n keys carried by `ValidierungsFehler`.
+- Providers fail soft: return `None`/`[]`, never raise into callers; the UI
+  shows the last quote flagged "veraltet". Secrets never appear in logs.
+
+## Tests
+
+Full pyramid + requirements traceability (markers:
+`@pytest.mark.requirement("REQ-...")`; matrix written by `tests/conftest.py`).
+Providers are tested against **fakes** (`tests/fixtures/fakes.py`) routed via
+test settings — never real FMP/pytr in CI (FMP/FX providers make no network
+calls when no API key is configured). `tests/fixtures/daten.py` has factories
+that go through the real services; use recent dates (`tag(n)`) to keep
+valuation rebuilds fast. The `svc` fixture provides a request context with an
+open DB session for direct service calls.
+
+## Gotchas
+
+- SQLite stores `Numeric` as float (warning filtered in `pyproject.toml`);
+  MariaDB uses real DECIMALs — keep both backends working (skip logic via
+  `TEST_MARIADB_URL`).
+- `pytr` is intentionally NOT in `requirements.txt` (heavy, unofficial); the
+  provider lazy-imports it. Install manually on hosts that use it.
+- `bewertungen_neu_aufbauen` runs on every booking change — it preloads all
+  data once; don't add per-day queries inside its loop.
+- Bump `VERSION` in `static/sw.js` on every release (PWA cache busting).

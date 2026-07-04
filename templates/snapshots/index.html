@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf, feld, loeschen_knopf %}
+{% block titel %}{{ depot.name }} — {{ _("snapshot.titel") }}{% endblock %}
+{% block inhalt %}
+<div class="seitenkopf">
+  <h1>{{ _("snapshot.titel") }} — {{ depot.name }}</h1>
+</div>
+
+<form method="post" action="{{ url_for('snapshots.neu', depot_id=depot.id) }}" class="formular inline-formular">
+  {{ csrf() }}
+  {{ feld("name", "snapshot.name", pflicht=true) }}
+  {{ feld("notiz", "snapshot.notiz") }}
+  <button type="submit" class="knopf">{{ _("snapshot.neu") }}</button>
+</form>
+
+{% if not snapshots %}
+  <p class="hinweis">{{ _("snapshot.keine") }}</p>
+{% else %}
+<form method="get" action="{{ url_for('snapshots.vergleich_route', depot_id=depot.id) }}">
+  <p class="hinweis">{{ _("snapshot.vergleich_hinweis") }}</p>
+  <table class="tabelle">
+    <thead>
+      <tr>
+        <th>A</th><th>B</th>
+        <th>{{ _("snapshot.name") }}</th>
+        <th>{{ _("snapshot.erstellt_am") }}</th>
+        <th class="zahl">{{ _("kennzahl.gesamtwert") }}</th>
+        <th class="zahl">{{ _("kennzahl.gesamtergebnis") }}</th>
+        <th>{{ _("snapshot.notiz") }}</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for s in snapshots %}
+      <tr>
+        <td><input type="radio" name="a" value="{{ s.id }}"></td>
+        <td><input type="radio" name="b" value="{{ s.id }}"></td>
+        <td>{{ s.name }}</td>
+        <td>{{ s.erstellt_am|zeitpunkt }}</td>
+        <td class="zahl">{{ s.gesamtwert|betrag }}</td>
+        <td class="zahl {{ vorzeichen_klasse(s.gesamtergebnis) }}">{{ s.gesamtergebnis|betrag }}</td>
+        <td>{{ s.notiz or "" }}</td>
+        <td class="aktionen">
+          {{ loeschen_knopf(url_for('snapshots.loeschen', depot_id=depot.id, snapshot_id=s.id), "snapshot.loeschen_bestaetigen") }}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <button type="submit" class="knopf">{{ _("aktion.vergleichen") }}</button>
+</form>
+{% endif %}
+{% endblock %}

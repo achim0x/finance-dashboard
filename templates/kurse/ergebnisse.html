@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block titel %}{{ _("kurse.aktualisieren") }}{% endblock %}
+{% block inhalt %}
+<h1>{{ _("kurse.aktualisieren") }} — {{ depot.name }}</h1>
+<table class="tabelle">
+  <thead>
+    <tr>
+      <th>{{ _("bestand.spalte.instrument") }}</th>
+      <th>{{ _("kurse.test.status") }}</th>
+      <th class="zahl">{{ _("bestand.spalte.kurs") }}</th>
+      <th>{{ _("bestand.spalte.zeit") }}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for e in ergebnisse %}
+    <tr>
+      <td>{{ e.instrument.name }} <small>{{ e.instrument.isin }}</small></td>
+      <td>
+        {% if e.status == "OK" %}<span class="ok">{{ _("kurse.test.ok") }}</span>
+        {% elif e.status == "FEHLER" %}<span class="negativ">{{ _("kurse.test.fehler") }}</span>
+        {% else %}<span class="warnung">{{ _("kurse.test.nicht_verfuegbar") }}</span>{% endif %}
+        {% if e.meldung %}<small>{{ _(e.meldung) }}</small>{% endif %}
+      </td>
+      <td class="zahl">{{ e.kurs|betrag if e.kurs is not none else "–" }}</td>
+      <td>{{ e.zeitstempel|zeitpunkt if e.zeitstempel else "–" }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+<a class="knopf" href="{{ url_for('bestand.index', depot_id=depot.id) }}">{{ _("aktion.zurueck") }}</a>
+{% endblock %}
