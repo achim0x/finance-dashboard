@@ -21,7 +21,7 @@ structure.
 
 ## What is being built
 
-**Musterdepot** — a single-user web tool to manage multiple paper stock portfolios
+**Finance Dashboard** — a single-user web tool to manage multiple paper stock portfolios
 (hypothetical buys/sells, valued against live market prices). It executes **no real
 orders**, gives no advice, and is not tax software.
 

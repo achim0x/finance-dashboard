@@ -1,9 +1,8 @@
-# Musterdepot (Finance Dashboard)
+# Finance Dashboard
 
-A single-user web tool for managing multiple **paper stock portfolios**
-("Musterdepots"). It lets you track investment ideas without real money: buys and
-sells are recorded hypothetically and valued continuously against live market
-prices.
+A single-user web tool for managing multiple **paper stock portfolios**. It lets
+you track investment ideas without real money: buys and sells are recorded
+hypothetically and valued continuously against live market prices.
 
 It is a **tracking and simulation tool only** — it places **no real orders**, gives
 **no investment advice**, and is **not tax software**.

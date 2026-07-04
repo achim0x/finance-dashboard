@@ -33,7 +33,8 @@ Diese Punkte wurden bei der Spezifikation festgelegt und steuern die Umsetzung:
 | Fremdwährung | **Abstrahiert** über eine `ExchangeRateProvider`-Schnittstelle (austauschbare Module, im Setup wählbar/konfigurierbar). Initial: **FMP**. Beliebig erweiterbar. |
 | Nutzer/Auth | **Einzelnutzer, kein Login.** Kein LDAP, keine Rollen. Später nachrüstbar (Skill unterstützt das). |
 | PWA | **Ja** — installierbar, offline-fähige App-Shell (PWA-Schicht des Skills, `references/pwa.md`). |
-| Sprache | **Deutsch** für alle Nutzertexte, Domänenbegriffe und DB-Spalten. |
+| Sprache (UI) | **Mehrsprachig** (i18n) — die App ist von Beginn an auf mehrere Sprachen ausgelegt; **erste implementierte Sprache ist Deutsch**. Domänenbegriffe und DB-Spalten bleiben deutsch (Code-Identifier). Siehe `REQ-I18N` (§10). |
+| Code & Doku | **Englisch** — alle Quellcode-Kommentare, Docstrings und die technische Dokumentation (README, `docs/`, Code-Kommentare) werden auf **Englisch** verfasst. Nutzertexte hingegen sind übersetzbar (i18n), Default Deutsch. |
 | Config | `pydantic-settings` (Empfehlung des Skills). |
 | Persistenz | SQLAlchemy 2.0 + Repository + Alembic; SQLite (dev) / MariaDB (prod). |
 
@@ -684,6 +685,12 @@ Requirement-IDs (nicht abschließend):
 - `REQ-SEC-CREDS` — TR-Zugangsdaten/Keys erscheinen nicht in Logs/Fehlermeldungen
   und liegen in der DB nur verschlüsselt (Schlüssel aus der Env).
 - `REQ-PWA-01/02/03` — Manifest, `sw.js` (Header), Offline-Seite erreichbar (siehe `pwa.md`).
+- `REQ-I18N` — Mehrsprachigkeit: die App ist von Beginn an auf mehrere Sprachen
+  ausgelegt. Alle Nutzertexte laufen über den i18n-Mechanismus (keine hartcodierten
+  UI-Strings); **Deutsch ist die erste vollständig implementierte Sprache**. Weitere
+  Sprachen sind ohne Änderung an der Fach-/UI-Logik ergänzbar (nur Übersetzungsdateien).
+  Sprachwahl umschaltbar, Fallback auf Deutsch. Domänenbegriffe/DB-Spalten bleiben
+  deutsch (Code-Identifier, nicht übersetzt).
 
 Provider gegen **Fakes** testen (kein echter FMP-/TR-Zugriff in der CI). Dual-Backend
 (SQLite/MariaDB) wie im Skill.
