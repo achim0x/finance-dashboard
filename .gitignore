@@ -1,0 +1,28 @@
+# Claude Code local files
+.claude/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Environment / secrets
+.env
+*.sqlite
+*.sqlite3
+
+# Test / build artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+reports/
+dist/
+build/
+
+# Editor / OS
+.idea/
+.vscode/
+.DS_Store
