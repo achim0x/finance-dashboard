@@ -19,13 +19,16 @@ from infrastructure.crypto import decrypt_credentials, encrypt_credentials
 from infrastructure.kurse import registry
 from infrastructure.persistence.sqlalchemy_repos import (
     SqlAlchemyDepotBewertungRepository,
+    SqlAlchemyDividendeRepository,
     SqlAlchemyInstrumentRepository,
     SqlAlchemyKaufRepository,
     SqlAlchemyKursEinstellungRepository,
     SqlAlchemyKursRepository,
     SqlAlchemySchlusskursRepository,
+    SqlAlchemySteuerverrechnungRepository,
     SqlAlchemyVerkaufRepository,
     SqlAlchemyWechselkursRepository,
+    SqlAlchemyZahlungRepository,
 )
 from utils.db import current_session, current_settings
 from utils.fehler import ValidierungsFehler
@@ -433,8 +436,14 @@ def bewertung_schreiben(depot_id: int, datum: date | None = None) -> None:
 def bewertungen_neu_aufbauen(depot_id: int, ab: date) -> None:
     """Rebuild the valuation series from `ab` until today — exclusively from
     daily closing prices (`Schlusskurs`) plus daily FX rates; never intraday
-    quotes (spec §5.6, REQ-REVAL-CLOSE). Missing days are carried forward
-    via `latest_before`. Flushes only; the caller owns the transaction."""
+    quotes (spec §5.6, REQ-REVAL-CLOSE). Missing days carry the last known
+    close/rate forward. Flushes only; the caller owns the transaction.
+
+    All data is preloaded once so the day loop runs without further queries
+    (this executes on every booking change, spec §4.11).
+    """
+    from domain.berechnung import offene_tranchen
+    from domain.berechnung.ledger import barbestand as _bar
     from services.depots import get_depot  # lazy: avoid cycle
 
     session = current_session()
@@ -442,6 +451,9 @@ def bewertungen_neu_aufbauen(depot_id: int, ab: date) -> None:
     if depot is None:
         return
     ab = max(ab, depot.eroeffnet_am)
+    heute = date.today()
+    if ab > heute:
+        return
 
     kauf_repo = SqlAlchemyKaufRepository(session)
     verkauf_repo = SqlAlchemyVerkaufRepository(session)
@@ -456,12 +468,48 @@ def bewertungen_neu_aufbauen(depot_id: int, ab: date) -> None:
     verkaeufe_je_instrument = {
         i.id: verkauf_repo.list_for_position(depot_id, i.id) for i in instrumente
     }
+    cash_quellen = {
+        "zahlungen": SqlAlchemyZahlungRepository(session).list_for_depot(depot_id),
+        "kaeufe": kauf_repo.list_for_depot(depot_id),
+        "verkaeufe": verkauf_repo.list_for_depot(depot_id),
+        "dividenden": SqlAlchemyDividendeRepository(session).list_for_depot(depot_id),
+        "steuerverrechnungen": SqlAlchemySteuerverrechnungRepository(session).list_for_depot(depot_id),
+    }
+    # Closing series per instrument, incl. the last close before `ab` as the
+    # carry-forward seed.
+    schluss_je_instrument: dict[int, list] = {}
+    for instrument in instrumente:
+        reihe = list(schluss_repo.series(instrument.id, ab))
+        vorher = schluss_repo.latest_before(instrument.id, ab - timedelta(days=1))
+        if vorher is not None:
+            reihe.insert(0, vorher)
+        schluss_je_instrument[instrument.id] = reihe
+    # Daily FX rates per needed currency pair (carry-forward likewise).
+    fx_reihen: dict[str, list] = {}
+    for instrument in instrumente:
+        if instrument.waehrung != depot.basiswaehrung:
+            paar = f"{instrument.waehrung}/{depot.basiswaehrung}"
+            if paar not in fx_reihen:
+                fx_reihen[paar] = [
+                    fx
+                    for fx in _fx_alle(fx_repo, instrument.waehrung, depot.basiswaehrung)
+                ]
 
-    from domain.berechnung import offene_tranchen
-    from services.zahlungen import barbestand  # lazy: avoid cycle
+    schluss_zeiger = {iid: 0 for iid in schluss_je_instrument}
+    fx_zeiger = {paar: 0 for paar in fx_reihen}
+
+    def _fortgeschrieben(reihe, zeiger_map, schluessel, tag, datum_attr):
+        """Advance the pointer to the last entry <= tag; None if before all."""
+        reihe_liste = reihe[schluessel]
+        z = zeiger_map[schluessel]
+        while z + 1 < len(reihe_liste) and getattr(reihe_liste[z + 1], datum_attr) <= tag:
+            z += 1
+        zeiger_map[schluessel] = z
+        if not reihe_liste or getattr(reihe_liste[z], datum_attr) > tag:
+            return None
+        return reihe_liste[z]
 
     tag = ab
-    heute = date.today()
     while tag <= heute:
         tagesende = datetime(tag.year, tag.month, tag.day, 23, 59, 59)
         depotbestand = ZERO
@@ -469,32 +517,47 @@ def bewertungen_neu_aufbauen(depot_id: int, ab: date) -> None:
             kaeufe = [
                 k for k in kaeufe_je_instrument[instrument.id] if k.kauf_zeitpunkt <= tagesende
             ]
+            if not kaeufe:
+                continue
             verkaeufe = [
                 v
                 for v in verkaeufe_je_instrument[instrument.id]
                 if v.verkauf_zeitpunkt <= tagesende
             ]
-            if not kaeufe:
-                continue
             tranchen = offene_tranchen(kaeufe, verkaeufe)
             stueck = sum((t.offene_stueck for t in tranchen), ZERO)
             if stueck == ZERO:
                 continue
-            schluss = schluss_repo.latest_before(instrument.id, tag)
+            schluss = _fortgeschrieben(
+                schluss_je_instrument, schluss_zeiger, instrument.id, tag, "datum"
+            )
             if schluss is None:
                 continue  # no close known at all -> instrument not valuable yet
             wert = stueck * schluss.schlusskurs
             if instrument.waehrung != depot.basiswaehrung:
-                fx = fx_repo.get_am(instrument.waehrung, depot.basiswaehrung, tag)
-                if fx is None:
-                    fx = fx_repo.latest_before(instrument.waehrung, depot.basiswaehrung, tag)
+                paar = f"{instrument.waehrung}/{depot.basiswaehrung}"
+                fx = _fortgeschrieben(fx_reihen, fx_zeiger, paar, tag, "datum")
                 if fx is not None:
                     wert *= fx.kurs
                 # No known rate at all -> unconverted (documented limitation).
             depotbestand += wert
-        bar = barbestand(depot_id, bis=tagesende)
+        bar = _bar(bis=tagesende, **cash_quellen)
         bewertung_repo.upsert(depot_id, tag, depotbestand, bar, depotbestand + bar)
         tag += timedelta(days=1)
+
+
+def _fx_alle(fx_repo, von: str, nach: str):
+    """All cached daily rates for a pair, ordered by date (for the rebuild)."""
+    from sqlalchemy import select
+
+    from domain.entities import Wechselkurs
+
+    stmt = (
+        select(Wechselkurs)
+        .where(Wechselkurs.von == von, Wechselkurs.nach == nach)
+        .order_by(Wechselkurs.datum)
+    )
+    return fx_repo._s.scalars(stmt).all()  # noqa: SLF001 — module-internal helper
 
 
 # --------------------------------------------------------------------------

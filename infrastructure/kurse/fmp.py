@@ -32,6 +32,10 @@ class FmpPriceProvider:
     # -- internal ---------------------------------------------------------
     def _get(self, path: str, **params):
         """GET helper; returns parsed JSON or None on any failure."""
+        if not self._api_key:
+            # No credentials configured -> stay offline instead of producing
+            # guaranteed 401s (also keeps tests/CI free of network calls).
+            return None
         import httpx  # lazy import — keeps the app importable without httpx
 
         params["apikey"] = self._api_key

@@ -21,6 +21,9 @@ class FmpExchangeRateProvider:
         self._timeout = timeout
 
     def _get(self, path: str, **params):
+        if not self._api_key:
+            # No credentials configured -> no network calls (see fmp.py).
+            return None
         import httpx  # lazy import
 
         params["apikey"] = self._api_key
