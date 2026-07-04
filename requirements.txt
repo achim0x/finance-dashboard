@@ -1,0 +1,33 @@
+# Finance Dashboard (Musterdepot) — runtime dependencies.
+
+# --- Web ---
+Flask>=3.0,<4.0
+Jinja2>=3.1,<4.0
+Werkzeug>=3.0,<4.0
+Flask-WTF>=1.2,<2.0
+
+# --- Persistence (SQLAlchemy + Alembic) ---
+SQLAlchemy>=2.0,<3.0
+alembic>=1.13,<2.0
+# MariaDB/MySQL driver for production (pick one):
+# mariadb>=1.1
+# PyMySQL>=1.1
+
+# --- Config ---
+pydantic>=2.5,<3.0
+pydantic-settings>=2.1,<3.0
+python-dotenv>=1.0,<2.0
+
+# --- Domain: price/FX providers & credential encryption ---
+httpx>=0.27,<1.0            # FMP HTTP client
+cryptography>=42.0          # encryption of provider credentials at rest
+# pytr (Trade Republic client, for leveraged-product quotes) is imported
+# lazily; install it on hosts that actually use the pytr provider:
+# pytr>=0.3
+
+# --- Export ---
+openpyxl>=3.1,<4.0
+
+# --- MCP server ---
+mcp>=1.2.0
+uvicorn>=0.30
