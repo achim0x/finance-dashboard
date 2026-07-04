@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf, feld, textfeld %}
+{% block titel %}{{ _("zahlung.titel_bearbeiten") if zahlung else _("zahlung.titel_neu") }}{% endblock %}
+{% block inhalt %}
+<h1>{{ _("zahlung.titel_bearbeiten") if zahlung else _("zahlung.titel_neu") }} — {{ depot.name }}</h1>
+<form method="post" class="formular">
+  {{ csrf() }}
+  <label class="feld">
+    <span>{{ _("zahlung.typ") }} *</span>
+    <select name="typ" required>
+      {% for t in ["EINZAHLUNG", "AUSZAHLUNG"] %}
+        <option value="{{ t }}" {% if (form.get("typ") or (zahlung.typ if zahlung else "EINZAHLUNG")) == t %}selected{% endif %}>
+          {{ _("zahlung." + t) }}
+        </option>
+      {% endfor %}
+    </select>
+  </label>
+  {{ feld("betrag", "zahlung.betrag", form.get("betrag", zahlung.betrag if zahlung else ""), pflicht=true) }}
+  {{ feld("zeitpunkt", "zahlung.zeitpunkt",
+          form.get("zeitpunkt", zahlung.zeitpunkt.strftime("%Y-%m-%dT%H:%M") if zahlung else ""),
+          typ="datetime-local", pflicht=true) }}
+  {{ textfeld("notiz", "zahlung.notiz", form.get("notiz", zahlung.notiz if zahlung else "")) }}
+  <div class="aktionen">
+    <button type="submit" class="knopf">{{ _("aktion.speichern") }}</button>
+    <a class="knopf sekundaer" href="{{ url_for('transaktionen.index', depot_id=depot.id) }}">{{ _("aktion.abbrechen") }}</a>
+  </div>
+</form>
+{% endblock %}

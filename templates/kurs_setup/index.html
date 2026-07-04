@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf %}
+{% block titel %}{{ _("kurse.setup.titel") }}{% endblock %}
+{% block inhalt %}
+<h1>{{ _("kurse.setup.titel") }}</h1>
+
+{% if gruppen and not gruppen[0].verschluesselung_ok %}
+  <div class="meldung error">{{ _("kurse.setup.keine_verschluesselung") }}</div>
+{% endif %}
+
+<div class="setup-spalten">
+{% for gruppe in gruppen %}
+  <section class="setup-block">
+    <h2>{{ _("kurse.setup." + gruppe.kursgruppe) }}</h2>
+    <form method="post" action="{{ url_for('kurs_setup.kursgruppe_speichern', gruppe=gruppe.kursgruppe) }}" class="formular">
+      {{ csrf() }}
+      <label class="feld">
+        <span>{{ _("kurse.setup.provider") }}</span>
+        <select name="provider_name">
+          {% for meta in gruppe.verfuegbare_provider %}
+            <option value="{{ meta.name }}" {% if gruppe.provider_name == meta.name %}selected{% endif %}>
+              {{ meta.anzeigename }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      {% for feld in gruppe.felder %}
+        <label class="feld">
+          <span>{{ feld.label }}</span>
+          <input type="{{ 'password' if feld.geheim else 'text' }}" name="cred_{{ feld.schluessel }}"
+                 value="{{ feld.wert }}" {% if feld.geheim %}autocomplete="new-password"{% endif %}>
+          {% if feld.geheim %}<small>{{ _("kurse.setup.geheim_hinweis") }}</small>{% endif %}
+        </label>
+      {% endfor %}
+      <label class="feld">
+        <span>{{ _("kurse.setup.intervall") }}</span>
+        <input type="number" name="intervall" min="10" value="{{ gruppe.abfrage_intervall_sekunden }}">
+      </label>
+      <label class="feld kontrollkaestchen">
+        <input type="checkbox" name="aktiv" {% if gruppe.aktiv %}checked{% endif %}>
+        <span>{{ _("kurse.setup.aktiv") }}</span>
+      </label>
+      <button type="submit" class="knopf">{{ _("aktion.speichern") }}</button>
+    </form>
+
+    {% if gruppe.kursgruppe == "HEBELPRODUKT" and gruppe.provider_name == "pytr" %}
+      <h3>{{ _("kurse.setup.pytr_titel") }}</h3>
+      <p>
+        {{ _("kurse.setup.pytr_status") }}:
+        <strong class="{{ 'ok' if pytr_status == 'angemeldet' else 'warnung' }}">
+          {{ _("kurse.setup.pytr_" + pytr_status) }}
+        </strong>
+      </p>
+      <form method="post" action="{{ url_for('kurs_setup.pytr_login') }}" class="inline">
+        {{ csrf() }}
+        <button type="submit" class="knopf sekundaer">
+          {{ _("kurse.setup.pytr_neu_anmelden") if pytr_status == "abgelaufen" else _("kurse.setup.pytr_login") }}
+        </button>
+      </form>
+      <form method="post" action="{{ url_for('kurs_setup.pytr_code') }}" class="inline">
+        {{ csrf() }}
+        <input type="text" name="code" maxlength="4" placeholder="{{ _("kurse.setup.pytr_code") }}" autocomplete="one-time-code">
+        <button type="submit" class="knopf sekundaer">{{ _("kurse.setup.pytr_code_senden") }}</button>
+      </form>
+    {% endif %}
+  </section>
+{% endfor %}
+
+  <section class="setup-block">
+    <h2>{{ _("kurse.setup.fx_titel") }}</h2>
+    <form method="post" action="{{ url_for('kurs_setup.fx_speichern') }}" class="formular">
+      {{ csrf() }}
+      <label class="feld">
+        <span>{{ _("kurse.setup.provider") }}</span>
+        <select name="provider_name">
+          {% for meta in fx.verfuegbare_provider %}
+            <option value="{{ meta.name }}" {% if fx.provider_name == meta.name %}selected{% endif %}>
+              {{ meta.anzeigename }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      {% for feld in fx.felder %}
+        <label class="feld">
+          <span>{{ feld.label }}</span>
+          <input type="{{ 'password' if feld.geheim else 'text' }}" name="cred_{{ feld.schluessel }}"
+                 value="{{ feld.wert }}" {% if feld.geheim %}autocomplete="new-password"{% endif %}>
+          {% if feld.geheim %}<small>{{ _("kurse.setup.geheim_hinweis") }}</small>{% endif %}
+        </label>
+      {% endfor %}
+      <label class="feld">
+        <span>{{ _("kurse.setup.intervall") }}</span>
+        <input type="number" name="intervall" min="10" value="{{ fx.abfrage_intervall_sekunden }}">
+      </label>
+      <label class="feld kontrollkaestchen">
+        <input type="checkbox" name="aktiv" {% if fx.aktiv %}checked{% endif %}>
+        <span>{{ _("kurse.setup.aktiv") }}</span>
+      </label>
+      <button type="submit" class="knopf">{{ _("aktion.speichern") }}</button>
+    </form>
+  </section>
+</div>
+
+<section class="setup-block">
+  <h2>{{ _("kurse.test.titel") }}</h2>
+  <p class="hinweis">{{ _("kurse.test.hinweis") }}</p>
+  <form method="post" action="{{ url_for('kurs_setup.test') }}" class="inline-formular">
+    {{ csrf() }}
+    <label class="feld">
+      <span>{{ _("kurse.test.depot") }}</span>
+      <select name="depot_id">
+        {% for d in depots %}
+          <option value="{{ d.id }}" {% if test_depot_id == d.id %}selected{% endif %}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <button type="submit" class="knopf">{{ _("aktion.testen") }}</button>
+  </form>
+
+  {% if testergebnisse is not none %}
+  <table class="tabelle">
+    <thead>
+      <tr>
+        <th>{{ _("bestand.spalte.instrument") }}</th>
+        <th>{{ _("kurse.test.status") }}</th>
+        <th class="zahl">{{ _("bestand.spalte.kurs") }}</th>
+        <th>{{ _("bestand.spalte.zeit") }}</th>
+        <th>{{ _("bestand.spalte.boerse") }}</th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for e in testergebnisse %}
+      <tr>
+        <td>{{ e.instrument.name }} <small>{{ e.instrument.isin }}</small></td>
+        <td>
+          {% if e.status == "OK" %}<span class="ok">{{ _("kurse.test.ok") }}</span>
+          {% elif e.status == "FEHLER" %}<span class="negativ">{{ _("kurse.test.fehler") }}</span>
+          {% else %}<span class="warnung">{{ _("kurse.test.nicht_verfuegbar") }}</span>{% endif %}
+          {% if e.meldung %}<small>{{ _(e.meldung) }}</small>{% endif %}
+        </td>
+        <td class="zahl">{{ e.kurs|betrag if e.kurs is not none else "–" }}
+          {% if e.waehrung %}{{ e.waehrung }}{% endif %}</td>
+        <td>{{ e.zeitstempel|zeitpunkt if e.zeitstempel else "–" }}</td>
+        <td>{{ e.quelle or "–" }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</section>
+{% endblock %}

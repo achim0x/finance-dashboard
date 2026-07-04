@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import geldzelle, prozentzelle, loeschen_knopf %}
+{% block titel %}{{ _("uebersicht.titel") }} — {{ _("app.titel") }}{% endblock %}
+{% block inhalt %}
+<div class="seitenkopf">
+  <h1>{{ _("uebersicht.titel") }}</h1>
+  <div>
+    <a class="knopf" href="{{ url_for('uebersicht.depot_neu') }}">{{ _("uebersicht.neues_depot") }}</a>
+    <a class="knopf sekundaer" href="{{ url_for('export.uebersicht_export', fmt='xlsx') }}">xlsx</a>
+    <a class="knopf sekundaer" href="{{ url_for('export.uebersicht_export', fmt='csv') }}">CSV</a>
+    <a class="knopf sekundaer" href="{{ url_for('export.uebersicht_export', fmt='pdf') }}" target="_blank">{{ _("aktion.drucken") }}</a>
+  </div>
+</div>
+
+{% if not zeilen %}
+  <p class="hinweis">{{ _("uebersicht.keine_depots") }}</p>
+{% else %}
+<table class="tabelle">
+  <thead>
+    <tr>
+      <th>{{ _("depot.name") }}</th>
+      <th class="zahl">{{ _("kennzahl.gesamtwert") }}</th>
+      <th class="zahl">{{ _("kennzahl.depotbestand") }}</th>
+      <th class="zahl">{{ _("kennzahl.barbestand") }}</th>
+      <th class="zahl">{{ _("kennzahl.gesamtgewinn") }}</th>
+      <th class="zahl">{{ _("kennzahl.unrealisierter_gewinn") }}</th>
+      <th class="zahl">{{ _("kennzahl.dividenden") }}</th>
+      <th class="zahl">{{ _("kennzahl.steuern") }}</th>
+      <th class="zahl">{{ _("kennzahl.gesamtergebnis") }}</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for zeile in zeilen %}
+    <tr>
+      <td><a href="{{ url_for('uebersicht.aktivieren', depot_id=zeile.depot.id) }}">{{ zeile.depot.name }}</a></td>
+      {{ geldzelle(zeile.kennzahlen.gesamtwert, faerben=false) }}
+      {{ geldzelle(zeile.kennzahlen.depotbestand, faerben=false) }}
+      {{ geldzelle(zeile.kennzahlen.barbestand, faerben=false) }}
+      {{ geldzelle(zeile.kennzahlen.gesamtgewinn) }}
+      {{ geldzelle(zeile.kennzahlen.unrealisierter_gewinn) }}
+      {{ geldzelle(zeile.kennzahlen.dividenden, faerben=false) }}
+      {{ geldzelle(zeile.kennzahlen.steuern, faerben=false) }}
+      {{ geldzelle(zeile.kennzahlen.gesamtergebnis) }}
+      <td class="aktionen">
+        <a class="knopf klein sekundaer" href="{{ url_for('uebersicht.depot_bearbeiten_route', depot_id=zeile.depot.id) }}">{{ _("aktion.bearbeiten") }}</a>
+        {{ loeschen_knopf(url_for('uebersicht.depot_loeschen_route', depot_id=zeile.depot.id), "uebersicht.loeschen_bestaetigen") }}
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+  <tfoot>
+    <tr class="summe">
+      <td>{{ _("uebersicht.summe") }}</td>
+      {{ geldzelle(summen.gesamtwert, faerben=false) }}
+      {{ geldzelle(summen.depotbestand, faerben=false) }}
+      {{ geldzelle(summen.barbestand, faerben=false) }}
+      {{ geldzelle(summen.gesamtgewinn) }}
+      {{ geldzelle(summen.unrealisierter_gewinn) }}
+      {{ geldzelle(summen.dividenden, faerben=false) }}
+      {{ geldzelle(summen.steuern, faerben=false) }}
+      {{ geldzelle(summen.gesamtergebnis) }}
+      <td></td>
+    </tr>
+  </tfoot>
+</table>
+{% endif %}
+{% endblock %}

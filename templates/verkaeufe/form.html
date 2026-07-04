@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf, feld, instrument_auswahl %}
+{% block titel %}{{ _("verkauf.titel_bearbeiten") if verkauf else _("verkauf.titel_neu") }}{% endblock %}
+{% block inhalt %}
+<h1>{{ _("verkauf.titel_bearbeiten") if verkauf else _("verkauf.titel_neu") }} — {{ depot.name }}</h1>
+<form method="post" class="formular">
+  {{ csrf() }}
+  {{ instrument_auswahl(instrumente, gewaehlt=(form.get("instrument_id")|int(0) or (verkauf.instrument_id if verkauf else vorauswahl))) }}
+  {{ feld("stueck", "verkauf.stueck", form.get("stueck", verkauf.stueck if verkauf else ""), pflicht=true) }}
+  {{ feld("verkaufskurs", "verkauf.verkaufskurs", form.get("verkaufskurs", verkauf.verkaufskurs if verkauf else ""), pflicht=true) }}
+  {{ feld("verkauf_zeitpunkt", "verkauf.zeitpunkt",
+          form.get("verkauf_zeitpunkt", verkauf.verkauf_zeitpunkt.strftime("%Y-%m-%dT%H:%M") if verkauf else ""),
+          typ="datetime-local", pflicht=true) }}
+  {{ feld("spesen", "verkauf.spesen", form.get("spesen", verkauf.spesen if verkauf else "0")) }}
+  {{ feld("steuer", "verkauf.steuer", form.get("steuer", verkauf.steuer if verkauf else "0")) }}
+  {{ feld("boerse", "kauf.boerse", form.get("boerse", verkauf.boerse if verkauf else "")) }}
+  <div class="aktionen">
+    <button type="submit" class="knopf">{{ _("aktion.speichern") }}</button>
+    <a class="knopf sekundaer" href="{{ url_for('verkaeufe.index', depot_id=depot.id) }}">{{ _("aktion.abbrechen") }}</a>
+  </div>
+</form>
+{% endblock %}

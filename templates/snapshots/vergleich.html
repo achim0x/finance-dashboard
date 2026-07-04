@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block titel %}{{ _("snapshot.vergleich_titel") }}{% endblock %}
+{% block inhalt %}
+<div class="seitenkopf">
+  <h1>{{ _("snapshot.vergleich_titel") }} — {{ depot.name }}</h1>
+  <div>
+    <a class="knopf sekundaer" href="{{ url_for('export.snapshot_vergleich_export', depot_id=depot.id, fmt='xlsx', a=daten.a.id, b=daten.b.id) }}">xlsx</a>
+    <a class="knopf sekundaer" href="{{ url_for('export.snapshot_vergleich_export', depot_id=depot.id, fmt='csv', a=daten.a.id, b=daten.b.id) }}">CSV</a>
+    <a class="knopf sekundaer" target="_blank" href="{{ url_for('export.snapshot_vergleich_export', depot_id=depot.id, fmt='pdf', a=daten.a.id, b=daten.b.id) }}">{{ _("aktion.drucken") }}</a>
+    <a class="knopf sekundaer" href="{{ url_for('snapshots.index', depot_id=depot.id) }}">{{ _("aktion.zurueck") }}</a>
+  </div>
+</div>
+
+<h2>{{ daten.a.name }} ({{ daten.a.erstellt_am|zeitpunkt }}) ↔ {{ daten.b.name }} ({{ daten.b.erstellt_am|zeitpunkt }})</h2>
+
+<table class="tabelle">
+  <thead>
+    <tr>
+      <th></th>
+      <th class="zahl">{{ _("snapshot.snapshot_a") }}</th>
+      <th class="zahl">{{ _("snapshot.snapshot_b") }}</th>
+      <th class="zahl">{{ _("snapshot.differenz") }}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for k in daten.kpis %}
+    <tr>
+      <td>{{ _("kennzahl." + k.feld) }}</td>
+      <td class="zahl">{{ k.a|betrag }}</td>
+      <td class="zahl">{{ k.b|betrag }}</td>
+      <td class="zahl {{ vorzeichen_klasse(k.differenz) }}">{{ k.differenz|betrag }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h3>{{ _("snapshot.positionen") }}</h3>
+<table class="tabelle">
+  <thead>
+    <tr>
+      <th>{{ _("bestand.spalte.instrument") }}</th>
+      <th class="zahl">{{ _("bestand.spalte.stueck") }} A</th>
+      <th class="zahl">{{ _("bestand.spalte.stueck") }} B</th>
+      <th class="zahl">{{ _("bestand.spalte.wert") }} A</th>
+      <th class="zahl">{{ _("bestand.spalte.wert") }} B</th>
+      <th class="zahl">{{ _("snapshot.differenz") }}</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in daten.positionen %}
+    <tr>
+      <td>{{ p.name }} <small>{{ p.isin }}</small></td>
+      <td class="zahl">{{ p.stueck_a|betrag(4) }}</td>
+      <td class="zahl">{{ p.stueck_b|betrag(4) }}</td>
+      <td class="zahl">{{ p.wert_a|betrag }}</td>
+      <td class="zahl">{{ p.wert_b|betrag }}</td>
+      <td class="zahl {{ vorzeichen_klasse(p.differenz) }}">{{ p.differenz|betrag }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

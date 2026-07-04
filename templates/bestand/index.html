@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf, geldzelle, prozentzelle, loeschen_knopf %}
+{% block titel %}{{ depot.name }} — {{ _("bestand.titel") }}{% endblock %}
+{% block inhalt %}
+<div class="seitenkopf">
+  <h1>{{ _("bestand.titel") }} — {{ depot.name }}</h1>
+  <div>
+    <a class="knopf" href="{{ url_for('kaeufe.neu', depot_id=depot.id) }}">{{ _("bestand.wert_hinzufuegen") }}</a>
+    <form method="post" class="inline" action="{{ url_for('kurse.aktualisieren', depot_id=depot.id) }}">
+      {{ csrf() }}
+      <button type="submit" class="knopf sekundaer">{{ _("kurse.aktualisieren") }}</button>
+    </form>
+    <a class="knopf sekundaer" href="{{ url_for('export.depot_export', depot_id=depot.id, bereich='bestand', fmt='xlsx') }}">xlsx</a>
+    <a class="knopf sekundaer" href="{{ url_for('export.depot_export', depot_id=depot.id, bereich='bestand', fmt='csv') }}">CSV</a>
+    <a class="knopf sekundaer" target="_blank" href="{{ url_for('export.depot_export', depot_id=depot.id, bereich='bestand', fmt='pdf') }}">{{ _("aktion.drucken") }}</a>
+  </div>
+</div>
+
+{% if not positionen %}
+  <p class="hinweis">{{ _("bestand.keine_positionen") }}</p>
+{% else %}
+<table class="tabelle bestand">
+  <thead>
+    <tr>
+      <th>{{ _("bestand.spalte.instrument") }}</th>
+      {% for s in spalten %}<th class="zahl">{{ _("bestand.spalte." + s) }}</th>{% endfor %}
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for p in positionen %}
+    {% set kz = p.kennzahlen %}
+    {% set aelteste = p.tranchen[0].kauf if p.tranchen else none %}
+    <tr>
+      <td>
+        <button type="button" class="aufklappen" data-ziel="tranchen-{{ p.instrument.id }}"
+                title="{{ _("bestand.tranchen_anzeigen") }}">▸</button>
+        <strong>{{ p.instrument.name }}</strong>
+        <small>{{ p.instrument.isin }}</small>
+        {% if p.unkonvertiert %}<span class="warnung" title="{{ _("bestand.unkonvertiert") }}">({{ p.instrument.waehrung }})</span>{% endif %}
+        {% if p.fx_veraltet %}<span class="warnung">FX {{ _("bestand.veraltet") }}</span>{% endif %}
+      </td>
+      {% for s in spalten %}
+        {% if s == "stueck" %}<td class="zahl">{{ kz.offene_stueck|betrag(4) }}</td>
+        {% elif s == "kaufkurs" %}<td class="zahl">{{ (kz.einstandswert / kz.offene_stueck if kz.offene_stueck else none)|betrag }}</td>
+        {% elif s == "kaufdatum" %}<td class="zahl">{{ aelteste.kauf_zeitpunkt|datum if aelteste else "–" }}</td>
+        {% elif s == "kaufwert" %}<td class="zahl">{{ kz.einstandswert|betrag }}</td>
+        {% elif s == "spesen" %}<td class="zahl">{{ p.tranchen|map(attribute="anteilige_spesen")|sum|betrag }}</td>
+        {% elif s == "chart" %}
+          <td class="minichart">
+            {% if aelteste %}
+              <canvas class="mini" width="120" height="36"
+                data-url="{{ url_for('kurse.mini_chart_json', depot_id=depot.id, instrument_id=p.instrument.id, ab=aelteste.kauf_zeitpunkt.date().isoformat()) }}"></canvas>
+            {% endif %}
+          </td>
+        {% elif s == "kurs" %}
+          <td class="zahl">
+            {{ p.kurs.kurs|betrag if p.kurs else "–" }}
+            {% if p.kurs and p.kurs_veraltet %}<span class="warnung">{{ _("bestand.veraltet") }}</span>{% endif %}
+          </td>
+        {% elif s == "boerse" %}<td class="zahl">{{ p.kurs.boerse or "–" if p.kurs else "–" }}</td>
+        {% elif s == "zeit" %}<td class="zahl">{{ p.kurs.zeitstempel|zeitpunkt if p.kurs else "–" }}</td>
+        {% elif s == "akt_eur" %}{{ geldzelle(kz.tagesveraenderung_eur) }}
+        {% elif s == "akt_pct" %}{{ prozentzelle(kz.tagesveraenderung_pct) }}
+        {% elif s == "ges_eur" %}{{ geldzelle(kz.gesamtveraenderung_eur) }}
+        {% elif s == "ges_pct" %}{{ prozentzelle(kz.gesamtveraenderung_pct) }}
+        {% elif s == "wert" %}<td class="zahl">{{ kz.positionswert|betrag }}</td>
+        {% elif s == "gewichtung" %}{{ prozentzelle(kz.gewichtung, faerben=false) }}
+        {% endif %}
+      {% endfor %}
+      <td class="aktionen">
+        <details class="kontextmenue">
+          <summary>⋮</summary>
+          <div>
+            <a href="{{ url_for('kaeufe.neu', depot_id=depot.id, instrument_id=p.instrument.id) }}">{{ _("aktion.nachkaufen") }}</a>
+            <a href="{{ url_for('verkaeufe.neu', depot_id=depot.id, instrument_id=p.instrument.id) }}">{{ _("aktion.verkaufen") }}</a>
+            <a href="{{ url_for('dividenden.neu', depot_id=depot.id, instrument_id=p.instrument.id) }}">{{ _("dividende.titel_neu") }}</a>
+          </div>
+        </details>
+      </td>
+    </tr>
+    <tr class="tranchen" id="tranchen-{{ p.instrument.id }}" hidden>
+      <td colspan="{{ spalten|length + 2 }}">
+        <table class="untertabelle">
+          <thead>
+            <tr>
+              <th>{{ _("bestand.spalte.kaufdatum") }}</th>
+              <th class="zahl">{{ _("bestand.spalte.stueck") }}</th>
+              <th class="zahl">{{ _("bestand.spalte.kaufkurs") }}</th>
+              <th class="zahl">{{ _("bestand.spalte.spesen") }}</th>
+              <th class="zahl">{{ _("bestand.spalte.kaufwert") }}</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          {% for t in p.tranchen %}
+            <tr>
+              <td>{{ t.kauf.kauf_zeitpunkt|zeitpunkt }}</td>
+              <td class="zahl">{{ t.offene_stueck|betrag(4) }} / {{ t.kauf.stueck|betrag(4) }}</td>
+              <td class="zahl">{{ t.kauf.kaufkurs|betrag }}</td>
+              <td class="zahl">{{ t.kauf.spesen|betrag }}</td>
+              <td class="zahl">{{ t.einstandswert|betrag }}</td>
+              <td class="aktionen">
+                <a class="knopf klein sekundaer" href="{{ url_for('kaeufe.bearbeiten', depot_id=depot.id, kauf_id=t.kauf.id) }}">{{ _("aktion.bearbeiten") }}</a>
+                {{ loeschen_knopf(url_for('kaeufe.loeschen', depot_id=depot.id, kauf_id=t.kauf.id), "kauf.loeschen_bestaetigen") }}
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+{% endblock %}
+{% block skripte %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>fdMiniChartsInit();</script>
+{% endblock %}

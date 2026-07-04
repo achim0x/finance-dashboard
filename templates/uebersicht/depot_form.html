@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf, feld, textfeld %}
+{% block titel %}{{ _("uebersicht.neues_depot") if not depot else _("uebersicht.depot_bearbeiten") }}{% endblock %}
+{% block inhalt %}
+<h1>{{ _("uebersicht.neues_depot") if not depot else _("uebersicht.depot_bearbeiten") }}</h1>
+<form method="post" class="formular">
+  {{ csrf() }}
+  {{ feld("name", "depot.name", form.get("name", depot.name if depot else ""), pflicht=true) }}
+  {{ feld("eroeffnet_am", "depot.eroeffnet_am",
+          form.get("eroeffnet_am", depot.eroeffnet_am.isoformat() if depot else ""),
+          typ="date", pflicht=true) }}
+  {{ feld("basiswaehrung", "depot.basiswaehrung",
+          form.get("basiswaehrung", depot.basiswaehrung if depot else "EUR"), pflicht=true) }}
+  <label class="feld">
+    <span>{{ _("depot.default_zeitraum") }}</span>
+    <select name="default_zeitraum">
+      {% for z in ["SEIT_EROEFFNUNG", "1M", "3M", "6M", "YTD", "1J", "BENUTZERDEFINIERT"] %}
+        <option value="{{ z }}" {% if (form.get("default_zeitraum") or (depot.default_zeitraum if depot else "SEIT_EROEFFNUNG")) == z %}selected{% endif %}>
+          {{ _("zeitraum." + z) }}
+        </option>
+      {% endfor %}
+    </select>
+  </label>
+  <label class="feld">
+    <span>{{ _("depot.default_bezugsbasis") }}</span>
+    <select name="default_bezugsbasis">
+      {% for b in ["INKL_BARBESTAND", "NUR_WERTPAPIERE"] %}
+        <option value="{{ b }}" {% if (form.get("default_bezugsbasis") or (depot.default_bezugsbasis if depot else "INKL_BARBESTAND")) == b %}selected{% endif %}>
+          {{ _("bezugsbasis." + b) }}
+        </option>
+      {% endfor %}
+    </select>
+  </label>
+  {{ textfeld("notiz", "depot.notiz", form.get("notiz", depot.notiz if depot else "")) }}
+  <div class="aktionen">
+    <button type="submit" class="knopf">{{ _("aktion.speichern") }}</button>
+    <a class="knopf sekundaer" href="{{ url_for('uebersicht.index') }}">{{ _("aktion.abbrechen") }}</a>
+  </div>
+</form>
+{% endblock %}

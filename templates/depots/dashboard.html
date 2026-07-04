@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "common/makros.html" import csrf %}
+{% block titel %}{{ depot.name }} — {{ _("depot.dashboard_titel") }}{% endblock %}
+{% block inhalt %}
+<div class="seitenkopf">
+  <h1>{{ depot.name }}</h1>
+  <div>
+    <form method="post" class="inline" action="{{ url_for('kurse.aktualisieren', depot_id=depot.id) }}">
+      {{ csrf() }}
+      <button type="submit" class="knopf">{{ _("kurse.aktualisieren") }}</button>
+    </form>
+    <a class="knopf sekundaer" href="{{ url_for('bestand.index', depot_id=depot.id) }}">{{ _("nav.bestand") }}</a>
+  </div>
+</div>
+
+<div class="kacheln" id="kpi-kacheln">
+  <div class="kachel"><span>{{ _("kennzahl.gesamtwert") }}</span><strong>{{ kennzahlen.gesamtwert|betrag }}</strong></div>
+  <div class="kachel"><span>{{ _("kennzahl.depotbestand") }}</span><strong>{{ kennzahlen.depotbestand|betrag }}</strong></div>
+  <div class="kachel"><span>{{ _("kennzahl.barbestand") }}</span><strong>{{ kennzahlen.barbestand|betrag }}</strong></div>
+  <div class="kachel"><span>{{ _("kennzahl.gesamtgewinn") }}</span>
+    <strong class="{{ vorzeichen_klasse(kennzahlen.gesamtgewinn) }}">{{ kennzahlen.gesamtgewinn|betrag }}</strong></div>
+  <div class="kachel"><span>{{ _("kennzahl.aktuell") }}</span>
+    <strong class="{{ vorzeichen_klasse(kennzahlen.aktuell_eur) }}">{{ kennzahlen.aktuell_eur|betrag }}
+      {% if kennzahlen.aktuell_pct is not none %}({{ kennzahlen.aktuell_pct|prozent }}){% endif %}</strong></div>
+  <div class="kachel detail"><span>{{ _("kennzahl.realisierter_gewinn") }}</span>
+    <strong class="{{ vorzeichen_klasse(kennzahlen.realisierter_gewinn) }}">{{ kennzahlen.realisierter_gewinn|betrag }}</strong></div>
+  <div class="kachel detail"><span>{{ _("kennzahl.unrealisierter_gewinn") }}</span>
+    <strong class="{{ vorzeichen_klasse(kennzahlen.unrealisierter_gewinn) }}">{{ kennzahlen.unrealisierter_gewinn|betrag }}
+      {% if kennzahlen.unrealisierter_gewinn_pct is not none %}({{ kennzahlen.unrealisierter_gewinn_pct|prozent }}){% endif %}</strong></div>
+  <div class="kachel detail"><span>{{ _("kennzahl.dividenden") }}</span><strong>{{ kennzahlen.dividenden|betrag }}</strong></div>
+  <div class="kachel detail"><span>{{ _("kennzahl.steuern") }}</span><strong>{{ kennzahlen.steuern|betrag }}</strong></div>
+  <div class="kachel detail"><span>{{ _("kennzahl.gesamtergebnis") }}</span>
+    <strong class="{{ vorzeichen_klasse(kennzahlen.gesamtergebnis) }}">{{ kennzahlen.gesamtergebnis|betrag }}</strong></div>
+</div>
+<button type="button" class="knopf klein sekundaer" id="details-umschalten"
+        data-mehr="{{ _("depot.mehr_details") }}" data-weniger="{{ _("depot.weniger_details") }}">
+  {{ _("depot.mehr_details") }}
+</button>
+
+<section class="chartbereich">
+  <div class="seitenkopf">
+    <h2>{{ _("depot.wertverlauf") }}</h2>
+    <form method="get" class="chart-steuerung" action="{{ url_for('depots.dashboard', depot_id=depot.id) }}">
+      <select name="zeitraum" onchange="this.form.submit()">
+        {% for z in zeitraeume %}
+          <option value="{{ z }}" {% if auswahl.zeitraum == z %}selected{% endif %}>{{ _("zeitraum." + z) }}</option>
+        {% endfor %}
+      </select>
+      <select name="basis" onchange="this.form.submit()">
+        {% for b in basen %}
+          <option value="{{ b }}" {% if auswahl.basis == b %}selected{% endif %}>{{ _("bezugsbasis." + b) }}</option>
+        {% endfor %}
+      </select>
+      {% if auswahl.zeitraum == "BENUTZERDEFINIERT" %}
+        <input type="date" name="von" value="{{ auswahl.von or '' }}" title="{{ _("zeitraum.von") }}">
+        <input type="date" name="bis" value="{{ auswahl.bis or '' }}" title="{{ _("zeitraum.bis") }}">
+        <button type="submit" class="knopf klein">{{ _("aktion.aktualisieren") }}</button>
+      {% endif %}
+    </form>
+  </div>
+  {% if chart.performance_eur is not none %}
+    <p>
+      {{ _("kennzahl.performance_zeitraum") }}:
+      <strong class="{{ vorzeichen_klasse(chart.performance_eur) }}">{{ chart.performance_eur|betrag }}</strong>
+      {% if chart.performance_pct is not none %}
+        (<span class="{{ vorzeichen_klasse(chart.performance_pct) }}">{{ chart.performance_pct|prozent }}</span>)
+      {% endif %}
+    </p>
+    <p class="hinweis klein">{{ _("depot.cashflow_hinweis") }}</p>
+  {% endif %}
+  {% if chart.labels %}
+    <canvas id="wertverlauf" height="90"
+            data-url="{{ url_for('depots.verlauf_json', depot_id=depot.id) }}"></canvas>
+  {% else %}
+    <p class="hinweis">{{ _("depot.keine_bewertungen") }}</p>
+  {% endif %}
+</section>
+{% endblock %}
+{% block skripte %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>fdWertverlaufInit();</script>
+{% endblock %}
